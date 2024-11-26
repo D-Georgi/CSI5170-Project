@@ -1,5 +1,6 @@
 
 data/activities.txt
-data/sample_submission.csv
 data/test.csv
-data/train.csv
+data/blood_glucose.csv
+data/blood_glucose_30min_avg_keep_missing.csv
+data/blood_glucose_30min_avg.csv
