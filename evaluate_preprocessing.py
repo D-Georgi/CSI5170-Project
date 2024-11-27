@@ -10,15 +10,13 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.compose import ColumnTransformer
 
 # Load datasets
-df_no_missing = pd.read_csv('data/blood_glucose_30min_avg.csv')
-df_missing = pd.read_csv('data/blood_glucose_30min_avg_keep_missing.csv')
+df_condensed = pd.read_csv('data/blood_glucose_30min_avg_keep_all_features.csv')
+df_original = pd.read_csv('data/blood_glucose.csv')
 
-# Inspect the datasets
-print("Dataset without missing values:")
-print(df_no_missing.info())
 print("\nDataset with missing values:")
-print(df_missing.info())
-
+print(df_condensed.info())
+print("\nDataset original:")
+print(df_original.info())
 
 target_column = 'bg+1:00'
 
@@ -80,15 +78,48 @@ def train_evaluate_ridge(df, target_column, alpha=1.0, test_size=0.2, random_sta
 
     return {'MSE': mse, 'R2': r2, 'Model': pipeline, 'X_test': X_test, 'y_test': y_test, 'y_pred': y_pred}
 
-# Train and evaluate models
-results_no_missing = train_evaluate_ridge(df_no_missing, target_column, alpha=1.0)
-results_missing = train_evaluate_ridge(df_missing, target_column, alpha=1.0)
+def encode_categoricals(df):
+    activities_file = 'data/activities.txt'
+    with open(activities_file, 'r') as f:
+        activities = f.read().splitlines()
 
-# Print performance
-print("Performance on Dataset without Missing Values:")
-print(f"Mean Squared Error (MSE): {results_no_missing['MSE']:.4f}")
-print(f"R-squared (R²): {results_no_missing['R2']:.4f}\n")
+    # Create a mapping: activity_name -> integer_code
+    # Assign 0 to 'No Activity' and start coding from 1
+    activity_mapping = {activity: idx + 1 for idx, activity in enumerate(activities)}
+    activity_mapping['No Activity'] = 0  # Add 'No Activity' as 0
 
-print("Performance on Dataset with Missing Values:")
+    activity_columns = [col for col in df.columns if col.startswith('activity-')]
+
+    if not activity_columns:
+        print("No activity columns found in the DataFrame.")
+        return df  # Return the original DataFrame if no activity columns are found
+
+    # Replace string labels with integer codes in each activity column
+    for col in activity_columns:
+        # Check if the column is of object type
+        if df[col].dtype == 'object':
+            df[col] = df[col].map(activity_mapping)
+
+            # Handle unmapped activities by assigning a default value, e.g., -1
+            # You can choose to handle this differently based on your needs
+            df[col] = df[col].fillna(-1).astype(int)
+
+            # Debug: Print unique values after mapping
+            # print(f"Unique values in {col} after mapping:", df[col].unique())
+        else:
+            print(f"Column {col} is not of type 'object'. Skipping encoding for this column.")
+
+    return df
+
+df_original = encode_categoricals(df_original)
+
+results_missing = train_evaluate_ridge(df_condensed, target_column, alpha=1.0)
+results_original = train_evaluate_ridge(df_original, target_column, alpha=1.0)
+
+print("Performance on Dataset with Condensed Features:")
 print(f"Mean Squared Error (MSE): {results_missing['MSE']:.4f}")
-print(f"R-squared (R²): {results_missing['R2']:.4f}")
+print(f"R-squared (R²): {results_missing['R2']:.4f}\n")
+
+print("Performance on Original Dataset Using Imputing:")
+print(f"Mean Squared Error (MSE): {results_original['MSE']:.4f}")
+print(f"R-squared (R²): {results_original['R2']:.4f}")

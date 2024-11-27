@@ -192,7 +192,7 @@ print("\nMissingness per Feature:")
 print(missing_percent.sort_values(ascending=False))
 
 # Define a threshold for missingness
-threshold = 70.0
+threshold = 100.0
 
 # Features to drop
 features_to_drop = missing_percent[missing_percent > threshold].index.tolist()
@@ -247,6 +247,6 @@ print(final_df.head())
 # --------------------------------------------
 
 # Save to a new CSV
-final_df.to_csv('data/blood_glucose_30min_avg.csv', index=False)
-print("\nProcessed data saved to 'data/blood_glucose_30min_avg.csv'")
+final_df.to_csv('data/blood_glucose_30min_avg_keep_all_features.csv', index=False)
+print("\nProcessed data saved to 'data/blood_glucose_30min_avg_keep_all_features.csv'")
 
