@@ -60,19 +60,14 @@ def ridgeHyperparameterOptimization():
     # Regression model
     model = Ridge()
 
-    # Generate list of regularization coefficients
+    # Create hyperparameter coefficients
     param_grid = {
-        'alpha': [0.001, 0.01, 0.1, 1, 10, 100, 1000],  # Regularization strength
-        'solver': ['auto', 'lsqr', 'saga'],  # Solver to use
+        'alpha': [0.01, 0.1, 1, 10, 100],  # Regularization strength
         'max_iter': [1000, 2000, 3000],  # Max iterations for the solver
-        'tol': [1e-4, 1e-3, 1e-2],  # Tolerance for the stopping criterion
     }
 
-    # Create parameters variable
-    parameters = {'alpha': alpha}
-
     # Run GridSearchCV to find best coefficient
-    ridgeGrid = GridSearchCV(model, parameters, cv=5, scoring='neg_mean_squared_error')
+    ridgeGrid = GridSearchCV(model, param_grid, cv=5, scoring='neg_mean_squared_error')
 
     # Fit the training data to the grid search
     ridgeGrid.fit(X_train_reg, y_train_reg)
@@ -80,17 +75,16 @@ def ridgeHyperparameterOptimization():
     # Print out the best alpha value
     print("Best Estimator: " + str(ridgeGrid.best_estimator_))
     alpha = ridgeGrid.best_estimator_.alpha
-    solver = ridgeGrid.best_estimator_.solver
     max_iter = ridgeGrid.best_estimator_.max_iter
     tol = ridgeGrid.best_estimator_.tol
 
-    return {'alpha': alpha, 'solver': solver, 'max_iter': max_iter, 'tol': tol}
+    return {'alpha': alpha, 'max_iter': max_iter}
 
 # Find optimal alpha
 optimalParameters = ridgeHyperparameterOptimization()
 
 # Create the ridge regression model
-ridge = Ridge(alpha=optimalParameters['alpha'], solver=optimalParameters['solver'], max_iter=optimalParameters['max_iter'], tol=optimalParameters['tol'])
+ridge = Ridge(alpha=optimalParameters['alpha'], max_iter=optimalParameters['max_iter'])
 
 # Time the training of the model
 ridge_start_time = time.perf_counter()
@@ -120,7 +114,7 @@ X_train_cnn, X_test_cnn, y_train_cnn, y_test_cnn = train_test_split(X_reshaped, 
 def cnnModel():
     # CNN Model Creation/definition. Using relu activation and softmax for the last layer
     model = models.Sequential([
-    layers.Conv1D(64, kernel_size=3, activation='relu', input_shape=(X_train.shape[1], 1)),
+    layers.Conv1D(64, kernel_size=3, activation='relu', input_shape=(X_train_cnn.shape[1], 1)),
     layers.MaxPooling1D(pool_size=2),
     layers.Conv1D(128, kernel_size=3, activation='relu'),
     layers.MaxPooling1D(pool_size=2),
@@ -176,7 +170,8 @@ for epochs in epoch:
         print(f"Epochs: {epochs}, Batch Size: {batch_size} => Loss: {cnn_loss:.4f}, MSE: {cnn_mse:.4f}, R2: {cnn_r2:.4f}")
         
         # Update best hyperparameters if current model performs better based on loss
-        if loss < best_loss:
+        if cnn_loss < best_loss:
+            best_loss = cnn_loss
             best_epoch = epochs
             best_batch_size = batch_size
             cnn_elapsed_time = cnn_elapsed_time
@@ -226,7 +221,7 @@ print(f'CNN MSE: {cnn_best_mse:0.4f}')
 print(f'CNN MSE (list): {max(best_mse_vals):0.4f}')
 print(f'CNN Val MSE: {max(best_val_mse_vals):0.4f}')
 
-print('\R2 Comparrison:')
+print('\nR2 Comparrison:')
 print(f'R2: {ridge_r2:0.4f}')
 print(f'CNN MSE: {cnn_best_r2:0.4f}')
 print(f'CNN MSE (list): {max(best_r2_vals):0.4f}')
