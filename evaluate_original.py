@@ -46,27 +46,19 @@ def encode_categoricals(df):
         else:
             print(f"Column {col} is not of type 'object'. Skipping encoding for this column.")
 
+    df = df.drop(columns=['id'])
+    df = df.drop(columns=['p_num'])
+    df = df.drop(columns=['time'])
     return df
 
-def preprocess_and_run(df):
-    df_fill_zeros = df.fillna(0)
+def preprocess_and_run(df, strategy):
+    imputer = SimpleImputer(missing_values=np.nan, strategy=strategy)
+    imputer_arr = imputer.fit_transform(df)
 
-    df_fill_zeros.info()
+    imputed_df = pd.DataFrame(imputer_arr, columns=df.columns)
 
-    X = df_fill_zeros.drop(columns=[target_column])
-    y = df_fill_zeros[target_column]
-
-    numeric_features = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
-    categorical_features = X.select_dtypes(include=['object', 'category']).columns.tolist()
-
-    identifier_cols = ['id', 'p_num', 'time']
-    for col in identifier_cols:
-        if col in X.columns:
-            X = X.drop(columns=[col])
-            if col in numeric_features:
-                numeric_features.remove(col)
-            if col in categorical_features:
-                categorical_features.remove(col)
+    X = imputed_df.drop(columns=[target_column])
+    y = imputed_df[target_column]
 
     scaler = StandardScaler()
     scaler.fit(X)
@@ -84,9 +76,11 @@ def preprocess_and_run(df):
     mse_fill = mean_squared_error(y_test, y_pred_fill)
     r2_fill = r2_score(y_test, y_pred_fill)
 
-    print("Performance on Dataset with Filled Missing Values:")
+    print(f"Performance on Dataset with {strategy} Imputed Missing Values:")
     print(f"Mean Squared Error (MSE): {mse_fill:.4f}")
     print(f"R-squared (R²): {r2_fill:.4f}")
 
 df_original = encode_categoricals(df_original)
-results_original = preprocess_and_run(df_original)
+preprocess_and_run(df_original, 'mean')
+preprocess_and_run(df_original, 'median')
+preprocess_and_run(df_original, 'most_frequent')
