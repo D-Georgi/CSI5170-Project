@@ -19,35 +19,67 @@ from sklearn.compose import ColumnTransformer
 """
 Section 1: Data preprocessing (loading and scaling)
 """
-
-# Load the data
-df_no_missing = pd.read_csv('data/blood_glucose_avgs_all_missing_values.csv')
-
-# Inspect dataset
-df_no_missing.info()
+# Grab test dataset
+df_original = pd.read_csv('data/blood_glucose.csv')
 
 # Identify target column
 target_column = 'bg+1:00'
 
-X = df_no_missing.drop(columns=[target_column])
-y = df_no_missing[target_column]
+def encode_categoricals(df):
+    activities_file = 'data/activities.txt'
+    with open(activities_file, 'r') as f:
+        activities = f.read().splitlines()
 
-numeric_features = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
-categorical_features = X.select_dtypes(include=['object', 'category']).columns.tolist()
+    # Create a mapping: activity_name -> integer_code
+    # Assign 0 to 'No Activity' and start coding from 1
+    activity_mapping = {activity: idx + 1 for idx, activity in enumerate(activities)}
+    activity_mapping['No Activity'] = 0  # Add 'No Activity' as 0
 
-identifier_cols = ['id', 'p_num', 'time']
-for col in identifier_cols:
-    if col in X.columns:
-        X = X.drop(columns=[col])
-        if col in numeric_features:
-            numeric_features.remove(col)
-        if col in categorical_features:
-            categorical_features.remove(col)
+    activity_columns = [col for col in df.columns if col.startswith('activity-')]
 
-# Scale feature data
-scaler = StandardScaler()
-scaler.fit(X)
-X = scaler.transform(X)
+    if not activity_columns:
+        print("No activity columns found in the DataFrame.")
+        return df  # Return the original DataFrame if no activity columns are found
+
+    # Replace string labels with integer codes in each activity column
+    for col in activity_columns:
+        # Check if the column is of object type
+        if df[col].dtype == 'object':
+            df[col] = df[col].map(activity_mapping)
+
+            # Handle unmapped activities by assigning a default value, e.g., -1
+            # You can choose to handle this differently based on your needs
+            df[col] = df[col].fillna(-1).astype(int)
+
+            # Debug: Print unique values after mapping
+            # print(f"Unique values in {col} after mapping:", df[col].unique())
+        else:
+            print(f"Column {col} is not of type 'object'. Skipping encoding for this column.")
+
+    df = df.drop(columns=['id'])
+    df = df.drop(columns=['p_num'])
+    df = df.drop(columns=['time'])
+    return df
+
+def preprocess(df, strategy):
+    imputer = SimpleImputer(missing_values=np.nan, strategy=strategy)
+    imputer_arr = imputer.fit_transform(df)
+
+    imputed_df = pd.DataFrame(imputer_arr, columns=df.columns)
+
+    X = imputed_df.drop(columns=[target_column])
+    y = imputed_df[target_column]
+
+    scaler = StandardScaler()
+    scaler.fit(X)
+    X = scaler.transform(X)
+
+    return X, y
+
+# Encode origiginal dataset
+df_original = encode_categoricals(df_original)
+# Preprocess encoded dataset using mean strategy
+X, y = preprocess(df_original, 'mean')
 
 """
 Section 2: Regularized Linear Regression
@@ -76,7 +108,6 @@ def ridgeHyperparameterOptimization():
     print("Best Estimator: " + str(ridgeGrid.best_estimator_))
     alpha = ridgeGrid.best_estimator_.alpha
     max_iter = ridgeGrid.best_estimator_.max_iter
-    tol = ridgeGrid.best_estimator_.tol
 
     return {'alpha': alpha, 'max_iter': max_iter}
 
@@ -140,7 +171,7 @@ batchSize = [32, 64, 128]
 best_loss = float('inf')
 
 # EarlyStopping callback to monitor validation MSE (patience of 3)
-earlyStop = EarlyStopping(monitor='val_mean_squared_error', patience=5, restore_best_weights=True)
+earlyStop = EarlyStopping(monitor='val_mean_squared_error', patience=3, restore_best_weights=True)
 
 # Loop through combinations of epochs and batch sizes
 for epochs in epoch:
@@ -184,8 +215,8 @@ for epochs in epoch:
 
 # Print out the best hyperparameters and their MSE and R2 values
 print(f"\nBest Epochs: {best_epoch}, Best Batch Size: {best_batch_size}")
-print(f"Best MSE: {best_mse_vals}, Best Val MSE: {best_val_mse_vals}")
-print(f"Best R2: {best_r2_vals}, Best Val R2: {best_val_r2_vals}")
+print(f"Best Validation MSE: {cnn_best_mse:0.4f}")
+print(f"Best Validation R2: {cnn_best_r2:0.4f}")
 
 # Plotting the MSE values for train and validation
 epochs = range(1, len(best_mse_vals) + 1)
@@ -215,14 +246,37 @@ print('\nTraining Time Comparrison:')
 print(f'Training time for ridge regression: {ridge_elapsed_time:0.4f} seconds')
 print(f'Training time for CNN: {cnn_elapsed_time:0.4f} seconds')
 
+# Create bar graph of the training time of each model
+data = {'Model': ['Ridge Regression', 'CNN Regression'], 'Training Time': [ridge_elapsed_time, cnn_elapsed_time]}
+df = pd.DataFrame(data)
+plt.bar(df['Model'], df['Training Time'])
+plt.xlabel('Model')
+plt.ylabel('Training Time (s)')
+plt.title('Training Time For Each Model')
+plt.show()
+
 print('\nMSE Comparrison:')
 print(f'Ridge MSE: {ridge_mse:0.4f}')
-print(f'CNN MSE: {cnn_best_mse:0.4f}')
-print(f'CNN MSE (list): {max(best_mse_vals):0.4f}')
-print(f'CNN Val MSE: {max(best_val_mse_vals):0.4f}')
+print(f'CNN Validation MSE: {cnn_best_mse:0.4f}')
+
+# Create bar graph of the MSE of each model
+data = {'Model': ['Ridge Regression', 'CNN Regression'], 'MSE': [ridge_mse, cnn_best_mse]}
+df = pd.DataFrame(data)
+plt.bar(df['Model'], df['MSE'])
+plt.xlabel('Model')
+plt.ylabel('MSE')
+plt.title('MSE For Each Model')
+plt.show()
 
 print('\nR2 Comparrison:')
-print(f'R2: {ridge_r2:0.4f}')
-print(f'CNN MSE: {cnn_best_r2:0.4f}')
-print(f'CNN MSE (list): {max(best_r2_vals):0.4f}')
-print(f'CNN Val MSE: {max(best_val_r2_vals):0.4f}')
+print(f'Ridge R2: {ridge_r2:0.4f}')
+print(f'CNN Validation R2: {cnn_best_r2:0.4f}')
+
+# Create bar graph of the R2 of each model
+data = {'Model': ['Ridge Regression', 'CNN Regression'], 'R2': [ridge_r2, cnn_best_r2]}
+df = pd.DataFrame(data)
+plt.bar(df['Model'], df['R2'])
+plt.xlabel('Model')
+plt.ylabel('R2')
+plt.title('R2 For Each Model')
+plt.show()
