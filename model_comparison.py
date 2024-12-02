@@ -88,7 +88,7 @@ Section 2: Regularized Linear Regression
 # Split the data into training and testing sets
 X_train_reg, X_test_reg, y_train_reg, y_test_reg = train_test_split(X, y, test_size=0.2, random_state=42)
 
-def ridgeHyperparameterOptimization(): 
+def ridgeOptimization(): 
     # Regression model
     model = Ridge()
 
@@ -98,39 +98,43 @@ def ridgeHyperparameterOptimization():
         'max_iter': [1000, 2000, 3000],  # Max iterations for the solver
     }
 
+    scoring = {'MSE': 'neg_mean_squared_error', 'R2': 'r2'}
+
     # Run GridSearchCV to find best coefficient
-    ridgeGrid = GridSearchCV(model, param_grid, cv=5, scoring='neg_mean_squared_error')
+    ridgeGrid = GridSearchCV(model, param_grid, cv=5, scoring=scoring, refit='MSE')
 
     # Fit the training data to the grid search
     ridgeGrid.fit(X_train_reg, y_train_reg)
 
-    # Print out the best alpha value
-    print("Best Estimator: " + str(ridgeGrid.best_estimator_))
-    alpha = ridgeGrid.best_estimator_.alpha
-    max_iter = ridgeGrid.best_estimator_.max_iter
+    # Grab the best estimator
+    bestEstimator = ridgeGrid.best_estimator_
+    print("Best Estimator: " + str(bestEstimator))
 
-    return {'alpha': alpha, 'max_iter': max_iter}
+    # Grab the grid search results into a dataframe
+    results = pd.DataFrame(ridgeGrid.cv_results_)
+    results['alpha'] = results['param_alpha'].astype(str)
+    results['max_iter'] = results['param_max_iter'].astype(str)
+    results['MSE'] = -results['mean_test_MSE']
+    results['R2'] = results['mean_test_R2']
 
-# Find optimal alpha
-optimalParameters = ridgeHyperparameterOptimization()
+    # Grab only the relevant columns
+    results = results[['mean_fit_time', 'alpha', 'max_iter', 'MSE', 'R2']]
 
-# Create the ridge regression model
-ridge = Ridge(alpha=optimalParameters['alpha'], max_iter=optimalParameters['max_iter'])
+    # Cast the alpha and max_iter values to numerics
+    results['alpha'] = pd.to_numeric(results['alpha'])
+    results['max_iter'] = pd.to_numeric(results['max_iter'])
 
-# Time the training of the model
-ridge_start_time = time.perf_counter()
-ridgeModel = ridge.fit(X_train_reg, y_train_reg)
-ridge_elapsed_time = time.perf_counter() - ridge_start_time
+    # Grab only the line best estimator row of the results
+    bestModel = results[(results['alpha'] == bestEstimator.alpha) & (results['max_iter'] == bestEstimator.max_iter)]
 
-# Predict on the test data
-y_pred = ridgeModel.predict(X_test_reg)
+    # Print the training time and MSE/R2 for the best estimator
+    print(f'Training time for ridge regression: {bestModel['mean_fit_time'].values[0]:0.4f} seconds')
+    print(f'MSE: {bestModel['MSE'].values[0]:0.4f}, R2: {bestModel['R2'].values[0]:0.4f}')
 
-# Calculate performance metrics
-ridge_mse = mean_squared_error(y_test_reg, y_pred)
-ridge_r2 = r2_score(y_test_reg, y_pred)
+    return 1
 
-print(f'Training time for ridge regression: {ridge_elapsed_time:0.4f} seconds')
-print(f'MSE: {ridge_mse:0.4f}, R2: {ridge_r2:0.4f}')
+# Find optimal hpyerparameters, MSE, and R2
+ridgeOptimization()
 
 """
 Section 3: Convolutional Neural Network for Regression
