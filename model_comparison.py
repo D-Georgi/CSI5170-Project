@@ -88,6 +88,11 @@ Section 2: Regularized Linear Regression
 # Split the data into training and testing sets
 X_train_reg, X_test_reg, y_train_reg, y_test_reg = train_test_split(X, y, test_size=0.2, random_state=42)
 
+# Declare variables
+ridge_time = 0
+ridge_mse = 0
+ridge_r2 = 0
+
 def ridgeOptimization(): 
     # Regression model
     model = Ridge()
@@ -148,6 +153,18 @@ X_reshaped = X.reshape((X.shape[0], X.shape[1], 1))
 
 # Split the data into training and testing data
 X_train_cnn, X_test_cnn, y_train_cnn, y_test_cnn = train_test_split(X_reshaped, y, test_size=0.2, random_state=42)
+
+# Declare variables
+best_loss = 0
+best_epoch = 0
+best_batch_size = 0
+cnn_time = 0
+cnn_best_mse = 0
+cnn_best_r2 = 0
+best_mse_vals = 0
+best_val_mse_vals = 0
+best_r2_vals = 0
+best_val_r2_vals = 0
 
 def cnnModel():
     # CNN Model Creation/definition. Using relu activation
