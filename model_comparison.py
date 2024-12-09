@@ -128,8 +128,11 @@ def ridgeOptimization():
     bestModel = results[(results['alpha'] == bestEstimator.alpha) & (results['max_iter'] == bestEstimator.max_iter)]
 
     # Print the training time and MSE/R2 for the best estimator
-    print(f'Training time for ridge regression: {bestModel['mean_fit_time'].values[0]:0.4f} seconds')
-    print(f'MSE: {bestModel['MSE'].values[0]:0.4f}, R2: {bestModel['R2'].values[0]:0.4f}')
+    ridge_time = bestModel['mean_fit_time'].values[0]
+    ridge_mse = bestModel['MSE'].values[0]
+    ridge_r2 = bestModel['R2'].values[0]
+    print(f'Training time for ridge regression: {ridge_time:0.4f} seconds')
+    print(f'MSE: {ridge_mse:0.4f}, R2: {ridge_r2:0.4f}')
 
     return 1
 
@@ -147,7 +150,7 @@ X_reshaped = X.reshape((X.shape[0], X.shape[1], 1))
 X_train_cnn, X_test_cnn, y_train_cnn, y_test_cnn = train_test_split(X_reshaped, y, test_size=0.2, random_state=42)
 
 def cnnModel():
-    # CNN Model Creation/definition. Using relu activation and softmax for the last layer
+    # CNN Model Creation/definition. Using relu activation
     model = models.Sequential([
     layers.Conv1D(64, kernel_size=3, activation='relu', input_shape=(X_train_cnn.shape[1], 1)),
     layers.MaxPooling1D(pool_size=2),
@@ -209,7 +212,7 @@ for epochs in epoch:
             best_loss = cnn_loss
             best_epoch = epochs
             best_batch_size = batch_size
-            cnn_elapsed_time = cnn_elapsed_time
+            cnn_time = cnn_elapsed_time
             cnn_best_mse = cnn_mse
             cnn_best_r2 = cnn_r2
             best_mse_vals = history.history['mean_squared_error']
@@ -247,11 +250,11 @@ Section 4: Analyze and Compare
 """
 
 print('\nTraining Time Comparrison:')
-print(f'Training time for ridge regression: {ridge_elapsed_time:0.4f} seconds')
-print(f'Training time for CNN: {cnn_elapsed_time:0.4f} seconds')
+print(f'Training time for ridge regression: {ridge_time:0.4f} seconds')
+print(f'Training time for CNN: {cnn_time:0.4f} seconds')
 
 # Create bar graph of the training time of each model
-data = {'Model': ['Ridge Regression', 'CNN Regression'], 'Training Time': [ridge_elapsed_time, cnn_elapsed_time]}
+data = {'Model': ['Ridge Regression', 'CNN Regression'], 'Training Time': [ridge_time, cnn_time]}
 df = pd.DataFrame(data)
 plt.bar(df['Model'], df['Training Time'])
 plt.xlabel('Model')
