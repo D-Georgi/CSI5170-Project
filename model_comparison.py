@@ -154,18 +154,6 @@ X_reshaped = X.reshape((X.shape[0], X.shape[1], 1))
 # Split the data into training and testing data
 X_train_cnn, X_test_cnn, y_train_cnn, y_test_cnn = train_test_split(X_reshaped, y, test_size=0.2, random_state=42)
 
-# Declare variables
-best_loss = 0
-best_epoch = 0
-best_batch_size = 0
-cnn_time = 0
-cnn_best_mse = 0
-cnn_best_r2 = 0
-best_mse_vals = 0
-best_val_mse_vals = 0
-best_r2_vals = 0
-best_val_r2_vals = 0
-
 def cnnModel():
     # CNN Model Creation/definition. Using relu activation
     model = models.Sequential([
@@ -193,6 +181,17 @@ batchSize = [32, 64, 128]
 
 # Initialize best loss metric
 best_loss = float('inf')
+
+# Declare variables
+best_epoch = 0
+best_batch_size = 0
+cnn_time = 0
+cnn_best_mse = 0
+cnn_best_r2 = 0
+best_mse_vals = 0
+best_val_mse_vals = 0
+best_r2_vals = 0
+best_val_r2_vals = 0
 
 # EarlyStopping callback to monitor validation MSE (patience of 3)
 earlyStop = EarlyStopping(monitor='val_mean_squared_error', patience=3, restore_best_weights=True)
