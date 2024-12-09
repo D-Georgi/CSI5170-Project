@@ -88,11 +88,6 @@ Section 2: Regularized Linear Regression
 # Split the data into training and testing sets
 X_train_reg, X_test_reg, y_train_reg, y_test_reg = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Declare variables
-ridge_time = 0
-ridge_mse = 0
-ridge_r2 = 0
-
 def ridgeOptimization(): 
     # Regression model
     model = Ridge()
@@ -139,10 +134,10 @@ def ridgeOptimization():
     print(f'Training time for ridge regression: {ridge_time:0.4f} seconds')
     print(f'MSE: {ridge_mse:0.4f}, R2: {ridge_r2:0.4f}')
 
-    return 1
+    return ridge_time, ridge_mse, ridge_r2
 
 # Find optimal hpyerparameters, MSE, and R2
-ridgeOptimization()
+ridge_time, ridge_mse, ridge_r2 = ridgeOptimization()
 
 """
 Section 3: Convolutional Neural Network for Regression
@@ -183,15 +178,15 @@ batchSize = [32, 64, 128]
 best_loss = float('inf')
 
 # Declare variables
-best_epoch = 0
-best_batch_size = 0
-cnn_time = 0
-cnn_best_mse = 0
-cnn_best_r2 = 0
-best_mse_vals = 0
-best_val_mse_vals = 0
-best_r2_vals = 0
-best_val_r2_vals = 0
+best_epoch = None
+best_batch_size = None
+cnn_time = None
+cnn_best_mse = None
+cnn_best_r2 = None
+best_mse_vals = None
+best_val_mse_vals = None
+best_r2_vals = None
+best_val_r2_vals = None
 
 # EarlyStopping callback to monitor validation MSE (patience of 3)
 earlyStop = EarlyStopping(monitor='val_mean_squared_error', patience=3, restore_best_weights=True)
